@@ -1,7 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { getSaju, getGunghap, canUnlockDeepReport, getDeepReport, type GunghapResult, type SajuChart } from "@hap/core";
+import {
+  getSaju, getGunghap, canUnlockDeepReport, getDeepReport,
+  type GunghapResult, type SajuChart,
+} from "@hap/core";
 
 // ─────────── 상수/유틸 ───────────
 
@@ -57,6 +60,38 @@ function parsePerson(p: PersonForm): SajuChart {
   });
 }
 
+// ─────────── 텍스트 렌더러 ───────────
+
+/** core가 마킹한 **...** 강조 구간을 하이라이트로 렌더링 */
+function Rich({ text }: { text: string }) {
+  const parts = text.split(/\*\*(.+?)\*\*/g);
+  return (
+    <>
+      {parts.map((p, i) =>
+        i % 2 === 1
+          ? <strong key={i} className="font-semibold text-[#B4451F] bg-[#F5C4B3]/40 rounded px-0.5">{p}</strong>
+          : <span key={i}>{p}</span>,
+      )}
+    </>
+  );
+}
+
+/** 연애 타이밍 문단: "YYYY년 — ..." 형식이면 연도 배지로 구조화 */
+function TimingParagraph({ text }: { text: string }) {
+  const m = text.match(/^(\d{4})년 — ([\s\S]*)$/);
+  if (!m) {
+    return <p className="text-sm leading-relaxed text-[#4A1B0C]/90"><Rich text={text} /></p>;
+  }
+  return (
+    <div className="flex gap-3">
+      <span className="mt-0.5 h-fit shrink-0 rounded-lg bg-[#712B13] px-2 py-1 font-serif text-xs text-[#FAECE7]">
+        {m[1]}
+      </span>
+      <p className="text-sm leading-relaxed text-[#4A1B0C]/90"><Rich text={m[2]} /></p>
+    </div>
+  );
+}
+
 // ─────────── 컴포넌트 ───────────
 
 function PersonFields({
@@ -103,7 +138,7 @@ export default function Home() {
   const [me, setMe] = useState<PersonForm>({ name: "", date: "", time: "unknown" });
   const [you, setYou] = useState<PersonForm>({ name: "", date: "", time: "unknown" });
   const [result, setResult] = useState<{
-    g: GunghapResult; sajuA: SajuChart; sajuB: SajuChart;
+    g: GunghapResult; sajuA: SajuChart; sajuB: SajuChart; nameA: string; nameB: string;
   } | null>(null);
   const [error, setError] = useState("");
 
@@ -111,16 +146,18 @@ export default function Home() {
     setError("");
     if (!me.date || !you.date) { setError("생년월일을 입력해주세요"); return; }
     try {
+      const nameA = me.name.trim() || "나";
+      const nameB = you.name.trim() || "그 사람";
       const sajuA = parsePerson(me);
       const sajuB = parsePerson(you);
-      setResult({ g: getGunghap(sajuA, sajuB), sajuA, sajuB });
+      setResult({
+        g: getGunghap(sajuA, sajuB, { a: nameA, b: nameB }),
+        sajuA, sajuB, nameA, nameB,
+      });
     } catch (e) {
       setError(e instanceof Error ? e.message : "계산 중 문제가 생겼어요");
     }
   };
-
-  const nameA = me.name || "나";
-  const nameB = you.name || "그 사람";
 
   return (
     <main className="min-h-screen bg-[#FBF4EC] px-4 py-10">
@@ -150,7 +187,7 @@ export default function Home() {
         )}
 
         {result && (() => {
-          const { g, sajuA, sajuB } = result;
+          const { g, sajuA, sajuB, nameA, nameB } = result;
           const chips = g.tags.map(tagToLabel).filter((v): v is string => v !== null).slice(0, 4);
           const good = g.breakdown.filter((i) => i.delta > 0);
           const caution = g.breakdown.filter((i) => i.delta < 0 && i.rule !== "element.fillCap");
@@ -202,11 +239,13 @@ export default function Home() {
                   <h2 className="font-serif text-lg text-[#3B6D11]">이 커플, 이래서 좋아요</h2>
                   <div className="mt-3 flex flex-col gap-4">
                     {good.map((item, i) => (
-                      <div key={i}>
+                      <div key={i} className="border-l-2 border-[#3B6D11]/40 pl-3">
                         <p className="font-serif text-sm text-[#712B13]">
                           {item.summary} <span className="text-[#3B6D11]">+{item.delta}</span>
                         </p>
-                        <p className="mt-1 text-sm leading-relaxed text-[#4A1B0C]/90">{item.detail}</p>
+                        <p className="mt-1 text-sm leading-relaxed text-[#4A1B0C]/90">
+                          <Rich text={item.detail} />
+                        </p>
                       </div>
                     ))}
                   </div>
@@ -219,11 +258,13 @@ export default function Home() {
                   <h2 className="font-serif text-lg text-[#A32D2D]">여기만 조심하면 돼요</h2>
                   <div className="mt-3 flex flex-col gap-4">
                     {caution.map((item, i) => (
-                      <div key={i}>
+                      <div key={i} className="border-l-2 border-[#A32D2D]/40 pl-3">
                         <p className="font-serif text-sm text-[#712B13]">
                           {item.summary} <span className="text-[#A32D2D]">{item.delta}</span>
                         </p>
-                        <p className="mt-1 text-sm leading-relaxed text-[#4A1B0C]/90">{item.detail}</p>
+                        <p className="mt-1 text-sm leading-relaxed text-[#4A1B0C]/90">
+                          <Rich text={item.detail} />
+                        </p>
                       </div>
                     ))}
                   </div>
@@ -234,7 +275,9 @@ export default function Home() {
               {neutral.map((item, i) => (
                 <section key={i} className="rounded-2xl border border-[#F0997B]/40 bg-white/60 p-5">
                   <p className="font-serif text-sm text-[#712B13]">{item.summary}</p>
-                  <p className="mt-1 text-sm leading-relaxed text-[#4A1B0C]/90">{item.detail}</p>
+                  <p className="mt-1 text-sm leading-relaxed text-[#4A1B0C]/90">
+                    <Rich text={item.detail} />
+                  </p>
                 </section>
               ))}
 
@@ -245,18 +288,19 @@ export default function Home() {
                   const report = getDeepReport(
                     sajuA, sajuB, new Date().getFullYear(),
                     (y) => getSaju({ year: y, month: 6, day: 15 }).year.branch,
+                    { a: nameA, b: nameB },
                   );
                   return (
                     <>
                       <p className="text-center text-xs text-[#993C1D]/60">
-                        🔓 두 분 모두 태어난 시간을 알아서 심층 리포트가 열렸어요 (A = {nameA} · B = {nameB})
+                        🔓 두 분 모두 태어난 시간을 알아서 심층 리포트가 열렸어요
                       </p>
                       {[report.conflict, report.timing, report.intimacy].map((sec) => (
                         <section key={sec.title} className="rounded-2xl border border-[#F5C4B3] bg-[#FAECE7] p-5">
                           <h2 className="font-serif text-lg text-[#712B13]">{sec.title}</h2>
                           <div className="mt-3 flex flex-col gap-3">
                             {sec.paragraphs.map((p, i) => (
-                              <p key={i} className="text-sm leading-relaxed text-[#4A1B0C]/90">{p}</p>
+                              <TimingParagraph key={i} text={p} />
                             ))}
                           </div>
                         </section>
