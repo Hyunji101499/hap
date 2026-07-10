@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { getSaju, getGunghap, type GunghapResult, type SajuChart } from "@hap/core";
+import { getSaju, getGunghap, canUnlockDeepReport, getDeepReport, type GunghapResult, type SajuChart } from "@hap/core";
 
 // ─────────── 상수/유틸 ───────────
 
@@ -238,18 +238,50 @@ export default function Home() {
                 </section>
               ))}
 
-              {/* ── 잠금 티저 ── */}
-              <div className="rounded-2xl border border-[#F5C4B3] bg-[#FAECE7] p-5">
-                {["갈등 포인트 심층 분석", "연애 타이밍", "속궁합"].map((label) => (
-                  <div key={label} className="flex items-center gap-2 py-1.5 text-sm text-[#993C1D]">
-                    <span aria-hidden>🔒</span>{label}
-                    <span className="ml-1 h-2 flex-1 rounded bg-[#F5C4B3]" />
+              {/* ── 심층 리포트: 해금 or 잠금 티저 ── */}
+              {(() => {
+                const unlocked = canUnlockDeepReport(sajuA, sajuB);
+                if (unlocked) {
+                  const report = getDeepReport(
+                    sajuA, sajuB, new Date().getFullYear(),
+                    (y) => getSaju({ year: y, month: 6, day: 15 }).year.branch,
+                  );
+                  return (
+                    <>
+                      <p className="text-center text-xs text-[#993C1D]/60">
+                        🔓 두 분 모두 태어난 시간을 알아서 심층 리포트가 열렸어요 (A = {nameA} · B = {nameB})
+                      </p>
+                      {[report.conflict, report.timing, report.intimacy].map((sec) => (
+                        <section key={sec.title} className="rounded-2xl border border-[#F5C4B3] bg-[#FAECE7] p-5">
+                          <h2 className="font-serif text-lg text-[#712B13]">{sec.title}</h2>
+                          <div className="mt-3 flex flex-col gap-3">
+                            {sec.paragraphs.map((p, i) => (
+                              <p key={i} className="text-sm leading-relaxed text-[#4A1B0C]/90">{p}</p>
+                            ))}
+                          </div>
+                        </section>
+                      ))}
+                    </>
+                  );
+                }
+                const missingMine = sajuA.hour === null;
+                const cta = missingMine
+                  ? "태어난 시간을 입력하면 심층 리포트가 열려요"
+                  : `${nameB}님이 태어난 시간을 입력하면 해금`;
+                return (
+                  <div className="rounded-2xl border border-[#F5C4B3] bg-[#FAECE7] p-5">
+                    {["갈등 포인트 심층 분석", "연애 타이밍", "속궁합"].map((label) => (
+                      <div key={label} className="flex items-center gap-2 py-1.5 text-sm text-[#993C1D]">
+                        <span aria-hidden>🔒</span>{label}
+                        <span className="ml-1 h-2 flex-1 rounded bg-[#F5C4B3]" />
+                      </div>
+                    ))}
+                    <button className="mt-3 w-full rounded-xl bg-[#D85A30] py-2.5 text-sm text-[#FAECE7] transition hover:bg-[#993C1D]">
+                      {cta}
+                    </button>
                   </div>
-                ))}
-                <button className="mt-3 w-full rounded-xl bg-[#D85A30] py-2.5 text-sm text-[#FAECE7] transition hover:bg-[#993C1D]">
-                  {nameB}님이 태어난 시간을 입력하면 해금
-                </button>
-              </div>
+                );
+              })()}
 
               <button
                 onClick={() => setResult(null)}

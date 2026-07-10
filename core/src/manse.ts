@@ -51,7 +51,7 @@ export interface SajuChart {
   input: SajuInput;
 }
 
-const STEM_HANGUL: Record<string, string> = {
+export const STEM_HANGUL: Record<string, string> = {
   甲: '갑', 乙: '을', 丙: '병', 丁: '정', 戊: '무',
   己: '기', 庚: '경', 辛: '신', 壬: '임', 癸: '계',
 };
@@ -61,7 +61,7 @@ const BRANCH_HANGUL: Record<string, string> = {
   午: '오', 未: '미', 申: '신', 酉: '유', 戌: '술', 亥: '해',
 };
 
-const STEM_ELEMENT: Record<string, Element> = {
+export const STEM_ELEMENT: Record<string, Element> = {
   甲: '목', 乙: '목', 丙: '화', 丁: '화', 戊: '토',
   己: '토', 庚: '금', 辛: '금', 壬: '수', 癸: '수',
 };
