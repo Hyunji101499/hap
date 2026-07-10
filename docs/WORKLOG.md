@@ -18,11 +18,17 @@
 ### 미결/주의
 
 - **만세력 외부 검증 아직 안 함** — 포스텔러/원광만세력과 일주 대조 필요 (본인 사주 기해 일주가 맞는지 확인 필요)
-- 환경 함정 2개 재확인: ① PowerShell 5.1로 한글 파일 읽고 쓰면 인코딩 파괴 (JetBrains MCP 도구만 사용) ② JetBrains MCP는 활성 프로젝트 창 기준 동작 — mcare4 창으로 전환돼 있으면 hap 파일 못 찾음
+- 환경 함정 3개 재확인: ① PowerShell 5.1로 한글 파일 읽고 쓰면 인코딩 파괴 (JetBrains MCP 도구만 사용) ② JetBrains MCP는 활성 프로젝트 창 기준 동작 — mcare4 창으로 전환돼 있으면 hap 파일 못 찾음 ③ **로컬 pnpm은 항상 최신(11.x)을 깔지 말 것 — Vercel 빌드 환경에서 npm 레지스트리 fetch 시 `ERR_INVALID_THIS`로 실패하는 버그 있음. pnpm 9.x 계열로 고정 (`packageManager` 필드 + 로컬 전역 설치 버전 일치 유지)**
+
+### 배포
+
+- **GitHub**: https://github.com/Hyunji101499/hap (main 브랜치)
+- **Vercel**: 연결 완료, main push마다 자동 배포. Root Directory = `web`, "Include files outside of Root Directory" 토글 ON (모노레포 때문에 필수)
+- 배포 삽질 기록: pnpm 11로 만든 lockfile을 Vercel이 파싱 실패 → npm 폴백 → `workspace:*` 프로토콜 모름 → 실패. `packageManager` 필드 핀만으론 해결 안 됨 (Vercel 내장 pnpm이 lockfile 자체를 못 읽음). Install Command를 `corepack enable && pnpm install`로 오버라이드했으나 이번엔 pnpm 11 자체의 npm 레지스트리 통신 버그(`ERR_INVALID_THIS`)로 재차 실패. **최종 해결: pnpm 9.15.0으로 다운그레이드 후 lockfile 재생성**
 
 ### 다음 후보 (우선순위 순)
 
-1. **배포**: GitHub 푸시 + Vercel 연결 → 공개 URL로 지인 테스트
+1. **지인 테스트**: 배포 URL로 실제 반응 받기 (다음 세션 최우선)
 2. **공유 링크 + DB**: 결과 영속화(Neon/Supabase PG), 고유 URL, 상대 시간 입력 해금 플로우, OG 이미지 (바이럴 루프 완성)
 3. **LLM 종합 카피**: breakdown fact들을 프롬프트로 → 커플 맞춤 헤드라인/종합 풀이 (API Route + 키 관리)
 4. 모바일 뷰 점검, 카드 이미지 저장 기능
