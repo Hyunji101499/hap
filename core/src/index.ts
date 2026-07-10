@@ -1,2 +1,2 @@
-export * from './manse.js';
-export * from './gunghap.js';
+export * from './manse';
+export * from './gunghap';

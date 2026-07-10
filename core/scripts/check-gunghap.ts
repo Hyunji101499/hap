@@ -1,5 +1,5 @@
-import { getSaju } from '../src/manse.js';
-import { getGunghap } from '../src/gunghap.js';
+﻿import { getSaju } from '../src/manse';
+import { getGunghap } from '../src/gunghap';
 
 // 궁합 규칙 동작 확인용 케이스
 const pairs = [

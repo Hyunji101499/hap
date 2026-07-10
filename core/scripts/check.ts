@@ -1,4 +1,4 @@
-import { getSaju } from '../src/manse.js';
+﻿import { getSaju } from '../src/manse';
 
 // 검증용: 아래 결과를 온라인 만세력(포스텔러, 원광만세력 등)과 대조할 것
 const cases = [

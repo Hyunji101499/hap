@@ -1,4 +1,4 @@
-/**
+﻿/**
  * 궁합 규칙 모듈 — hap의 핵심 자산
  *
  * 두 명식(SajuChart)을 받아 궁합 점수와 관계 해석 재료를 계산한다.
@@ -10,7 +10,7 @@
  *  3. 오행 상보성 — 내게 없는 오행을 상대가 채워주는가
  *  4. 십신(十神) — 상대가 나에게 어떤 존재인가 (점수보다 카피 재료 목적)
  */
-import type { Element, Pillar, SajuChart } from './manse.js';
+import type { Element, Pillar, SajuChart } from './manse';
 
 // ───────────────────────── 기초 테이블 ─────────────────────────
 
@@ -59,10 +59,10 @@ const BRANCH_CHUNG: Array<[string, string]> = [
 
 /** 지지 형 (상형·삼형의 2자 조합, 자형) */
 const BRANCH_HYEONG: Array<[string, string]> = [
-  ['寅', '巳'], ['巳', '申'], ['寅', '申'], // 인사신 삼형
-  ['丑', '戌'], ['戌', '未'], ['丑', '未'], // 축술미 삼형
-  ['子', '卯'],                             // 자묘 상형
-  ['辰', '辰'], ['午', '午'], ['酉', '酉'], ['亥', '亥'], // 자형
+  ['寅', '巳'], ['巳', '申'], ['寅', '申'],
+  ['丑', '戌'], ['戌', '未'], ['丑', '未'],
+  ['子', '卯'],
+  ['辰', '辰'], ['午', '午'], ['酉', '酉'], ['亥', '亥'],
 ];
 
 /** 지지 해 6쌍 */
@@ -114,7 +114,7 @@ export function getSipsin(me: Pillar, other: Pillar): Sipsin {
   if (GENERATES[mine] === yours) return samePolarity ? '식신' : '상관';
   if (CONTROLS[mine] === yours) return samePolarity ? '편재' : '정재';
   if (CONTROLS[yours] === mine) return samePolarity ? '편관' : '정관';
-  return samePolarity ? '편인' : '정인'; // GENERATES[yours] === mine
+  return samePolarity ? '편인' : '정인';
 }
 
 // ───────────────────────── 규칙 평가 ─────────────────────────
@@ -155,7 +155,6 @@ function evalIlgan(a: Pillar, b: Pillar, items: ScoreItem[], tags: string[]): vo
     tags.push(`stem-gen-${giver}`);
     return;
   }
-  // 남은 경우는 상극
   const controller = CONTROLS[a.stemElement] === b.stemElement ? 'A' : 'B';
   items.push({
     rule: 'ilgan.sanggeuk',
@@ -253,7 +252,6 @@ function evalElementFill(
     }
   }
 
-  // 상보성 보너스 상한 (최대 +12): 초과분 차감 항목으로 명시
   if (fillBonus > 12) {
     items.push({
       rule: 'element.fillCap',
