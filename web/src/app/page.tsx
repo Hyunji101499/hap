@@ -270,7 +270,7 @@ export default function Home() {
                   : `${nameB}님이 태어난 시간을 입력하면 해금`;
                 return (
                   <div className="rounded-2xl border border-[#F5C4B3] bg-[#FAECE7] p-5">
-                    {["갈등 포인트 심층 분석", "연애 타이밍", "속궁합"].map((label) => (
+                    {["갈등 포인트 심층 분석", "연애 타이밍", "속마음 궁합"].map((label) => (
                       <div key={label} className="flex items-center gap-2 py-1.5 text-sm text-[#993C1D]">
                         <span aria-hidden>🔒</span>{label}
                         <span className="ml-1 h-2 flex-1 rounded bg-[#F5C4B3]" />

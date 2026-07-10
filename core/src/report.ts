@@ -1,5 +1,5 @@
 /**
- * 심층 리포트 모듈 — 해금 콘텐츠 (갈등 포인트 / 연애 타이밍 / 속궁합)
+ * 심층 리포트 모듈 — 해금 콘텐츠 (갈등 포인트 / 연애 타이밍 / 속마음 궁합)
  *
  * 해금 조건: 두 사람 모두 태어난 시간(시주)이 있을 것.
  * (시주가 있어야 명식 8글자가 완성되어 정밀 해석이 가능하다는 명분 + 바이럴 장치)
@@ -11,13 +11,13 @@ import { getSipsin, getGunghap, SIPSIN_MEANING, type Sipsin } from './gunghap';
 
 // ───────────────────────── 테이블 ─────────────────────────
 
-/** 지장간 본기(本氣): 지지 속에 숨은 대표 천간 — 속궁합의 재료 */
+/** 지장간 본기(本氣): 지지 속에 숨은 대표 천간 — 속마음 궁합의 재료 */
 const HIDDEN_STEM: Record<string, string> = {
   子: '癸', 丑: '己', 寅: '甲', 卯: '乙', 辰: '戊', 巳: '丙',
   午: '丁', 未: '己', 申: '庚', 酉: '辛', 戌: '戊', 亥: '壬',
 };
 
-/** 오행별 온도 — 속궁합의 표현 방식 해석용 */
+/** 오행별 온도 — 속마음 궁합의 표현 방식 해석용 */
 const ELEMENT_TEMPER: Record<string, { label: string; desc: string }> = {
   화: { label: '불', desc: '표현이 직접적이고 뜨거운' },
   목: { label: '봄바람', desc: '표현이 다정하고 살가운' },
@@ -195,7 +195,7 @@ function buildTiming(
   return { title: '연애 타이밍 (향후 3년)', paragraphs };
 }
 
-// ───────────────────────── 3. 속궁합 ─────────────────────────
+// ───────────────────────── 3. 속마음 궁합 ─────────────────────────
 
 function buildIntimacy(a: SajuChart, b: SajuChart): ReportSection {
   const paragraphs: string[] = [];
@@ -207,12 +207,12 @@ function buildIntimacy(a: SajuChart, b: SajuChart): ReportSection {
   const innerBtoA = getSipsin(hidB, hidA);
 
   paragraphs.push(
-    `사주에서 겉궁합은 일간(드러나는 나), 속궁합은 일지 속에 숨은 글자(지장간)로 봐요. A의 일지 ${a.day.branch} 속에는 ${STEM_HANGUL[HIDDEN_STEM[a.day.branch]]}(${HIDDEN_STEM[a.day.branch]}), B의 일지 ${b.day.branch} 속에는 ${STEM_HANGUL[HIDDEN_STEM[b.day.branch]]}(${HIDDEN_STEM[b.day.branch]})${josa(STEM_HANGUL[HIDDEN_STEM[b.day.branch]], '이', '가')} 숨어 있어요 — 이게 두 사람이 가장 가까워졌을 때 드러나는 진짜 속마음이에요.`,
+    `사주에서 겉궁합은 일간(드러나는 나), 속마음 궁합은 일지 속에 숨은 글자(지장간)로 봐요. A의 일지 ${a.day.branch} 속에는 ${STEM_HANGUL[HIDDEN_STEM[a.day.branch]]}(${HIDDEN_STEM[a.day.branch]}), B의 일지 ${b.day.branch} 속에는 ${STEM_HANGUL[HIDDEN_STEM[b.day.branch]]}(${HIDDEN_STEM[b.day.branch]})${josa(STEM_HANGUL[HIDDEN_STEM[b.day.branch]], '이', '가')} 숨어 있어요 — 이게 두 사람이 가장 가까워졌을 때 드러나는 진짜 속마음이에요.`,
   );
 
   if (innerAtoB === outerAtoB) {
     paragraphs.push(
-      `겉과 속이 같은 커플이에요. 드러나는 관계(${outerAtoB})와 속마음의 관계(${innerAtoB})가 일치해서, 가까워질수록 "역시 내가 알던 그 사람"이라는 안정감이 커져요. 반전은 없지만 배신감도 없는, 투명한 속궁합이에요.`,
+      `겉과 속이 같은 커플이에요. 드러나는 관계(${outerAtoB})와 속마음의 관계(${innerAtoB})가 일치해서, 가까워질수록 "역시 내가 알던 그 사람"이라는 안정감이 커져요. 반전은 없지만 배신감도 없는, 투명한 속마음 궁합이에요.`,
     );
   } else {
     paragraphs.push(
@@ -228,11 +228,11 @@ function buildIntimacy(a: SajuChart, b: SajuChart): ReportSection {
     );
   } else {
     paragraphs.push(
-      `속마음의 온도가 달라요. A는 '${tA.label}'(${tA.desc} 타입), B는 '${tB.label}'(${tB.desc} 타입)이에요. 애정의 크기가 아니라 표현 방식이 다른 것뿐인데, 이걸 모르면 "쟤는 날 덜 좋아하나"로 오해하기 쉬워요. 상대의 온도로 번역해서 읽는 연습이 속궁합의 전부예요.`,
+      `속마음의 온도가 달라요. A는 '${tA.label}'(${tA.desc} 타입), B는 '${tB.label}'(${tB.desc} 타입)이에요. 애정의 크기가 아니라 표현 방식이 다른 것뿐인데, 이걸 모르면 "쟤는 날 덜 좋아하나"로 오해하기 쉬워요. 상대의 온도로 번역해서 읽는 연습이 속마음 궁합의 전부예요.`,
     );
   }
 
-  return { title: '속궁합', paragraphs };
+  return { title: '속마음 궁합', paragraphs };
 }
 
 // ───────────────────────── 공개 API ─────────────────────────
