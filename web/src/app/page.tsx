@@ -17,8 +17,14 @@ const TAG_LABEL: Record<string, string> = {
   "branch-yukhap": "육합",
   "branch-banhap": "반합",
   "branch-chung": "충",
+  "branch-wonjin": "원진",
   "branch-hyeong": "형",
   "branch-hae": "해",
+  "branch-neutral": "담백",
+  "tti-samhap": "찰떡 띠",
+  "tti-yukhap": "띠 육합",
+  "tti-chung": "띠 충",
+  "tti-wonjin": "띠 원진",
 };
 
 function tagToLabel(tag: string): string | null {
@@ -28,18 +34,13 @@ function tagToLabel(tag: string): string | null {
   return null;
 }
 
-/** 점수대별 헤드라인 + breakdown 최상위 근거로 만드는 결정론적 카피 (LLM 도입 전 임시) */
-function makeCopy(g: GunghapResult): { headline: string; sub: string } {
-  const sorted = [...g.breakdown].sort((a, b) => Math.abs(b.delta) - Math.abs(a.delta));
-  const top = sorted[0];
-  const headline =
-    g.score >= 80 ? "이 정도면 하늘이 묶어놓은 사이" :
+/** 점수대별 헤드라인 (LLM 도입 전 임시) */
+function makeHeadline(g: GunghapResult): string {
+  return g.score >= 80 ? "이 정도면 하늘이 묶어놓은 사이" :
     g.score >= 65 ? "합이 잘 맞는 인연" :
     g.score >= 50 ? "노력하면 예쁘게 맞물리는 사이" :
     g.score >= 35 ? "쉽지 않지만, 그래서 특별한 조합" :
     "정면충돌 주의. 근데 원래 그런 게 더 짜릿하지 않나";
-  const sub = top ? top.detail.split("—")[1]?.trim() ?? top.detail : "";
-  return { headline, sub };
 }
 
 interface PersonForm {
@@ -150,14 +151,14 @@ export default function Home() {
 
         {result && (() => {
           const { g, sajuA, sajuB } = result;
-          const copy = makeCopy(g);
-          const chips = [
-            ...g.tags.map(tagToLabel).filter((v): v is string => v !== null),
-            g.sipsinAtoB,
-          ].slice(0, 4);
+          const chips = g.tags.map(tagToLabel).filter((v): v is string => v !== null).slice(0, 4);
+          const good = g.breakdown.filter((i) => i.delta > 0);
+          const caution = g.breakdown.filter((i) => i.delta < 0 && i.rule !== "element.fillCap");
+          const neutral = g.breakdown.filter((i) => i.delta === 0);
 
           return (
-            <div className="mt-8">
+            <div className="mt-8 flex flex-col gap-4">
+              {/* ── 점수 카드 (공유용) ── */}
               <div className="rounded-2xl border border-[#F5C4B3] bg-[#FAECE7] p-6">
                 <p className="text-center text-sm text-[#712B13]">
                   {nameA} <span className="text-[#D85A30]">×</span> {nameB}
@@ -176,42 +177,90 @@ export default function Home() {
                   ))}
                 </div>
                 <p className="mt-5 text-center font-serif leading-relaxed text-[#712B13]">
-                  &ldquo;{copy.headline}.<br />{copy.sub}&rdquo;
+                  &ldquo;{makeHeadline(g)}&rdquo;
                 </p>
+              </div>
 
-                <div className="mt-6 border-t border-dashed border-[#F0997B] pt-4">
-                  {["갈등 포인트", "연애 타이밍", "속궁합"].map((label) => (
-                    <div key={label} className="flex items-center gap-2 py-1.5 text-sm text-[#993C1D]">
-                      <span aria-hidden>🔒</span>{label}
-                      <span className="ml-1 h-2 flex-1 rounded bg-[#F5C4B3]" />
-                    </div>
-                  ))}
+              {/* ── 서로에게 어떤 존재인가 (십신) ── */}
+              <section className="rounded-2xl border border-[#F0997B]/40 bg-white/60 p-5">
+                <h2 className="font-serif text-lg text-[#712B13]">서로에게 어떤 존재일까</h2>
+                <div className="mt-3 flex flex-col gap-3 text-sm leading-relaxed text-[#4A1B0C]">
+                  <p>
+                    <span className="font-serif text-[#D85A30]">{nameA}에게 {nameB}는 [{g.sipsinAtoB}]</span>
+                    <br />{g.sipsinAtoBMeaning}
+                  </p>
+                  <p>
+                    <span className="font-serif text-[#D85A30]">{nameB}에게 {nameA}는 [{g.sipsinBtoA}]</span>
+                    <br />{g.sipsinBtoAMeaning}
+                  </p>
                 </div>
-                <button className="mt-4 w-full rounded-xl bg-[#D85A30] py-2.5 text-sm text-[#FAECE7] transition hover:bg-[#993C1D]">
+              </section>
+
+              {/* ── 잘 맞는 부분 ── */}
+              {good.length > 0 && (
+                <section className="rounded-2xl border border-[#F0997B]/40 bg-white/60 p-5">
+                  <h2 className="font-serif text-lg text-[#3B6D11]">이 커플, 이래서 좋아요</h2>
+                  <div className="mt-3 flex flex-col gap-4">
+                    {good.map((item, i) => (
+                      <div key={i}>
+                        <p className="font-serif text-sm text-[#712B13]">
+                          {item.summary} <span className="text-[#3B6D11]">+{item.delta}</span>
+                        </p>
+                        <p className="mt-1 text-sm leading-relaxed text-[#4A1B0C]/90">{item.detail}</p>
+                      </div>
+                    ))}
+                  </div>
+                </section>
+              )}
+
+              {/* ── 조심할 부분 ── */}
+              {caution.length > 0 && (
+                <section className="rounded-2xl border border-[#F0997B]/40 bg-white/60 p-5">
+                  <h2 className="font-serif text-lg text-[#A32D2D]">여기만 조심하면 돼요</h2>
+                  <div className="mt-3 flex flex-col gap-4">
+                    {caution.map((item, i) => (
+                      <div key={i}>
+                        <p className="font-serif text-sm text-[#712B13]">
+                          {item.summary} <span className="text-[#A32D2D]">{item.delta}</span>
+                        </p>
+                        <p className="mt-1 text-sm leading-relaxed text-[#4A1B0C]/90">{item.detail}</p>
+                      </div>
+                    ))}
+                  </div>
+                </section>
+              )}
+
+              {/* ── 중립 풀이 ── */}
+              {neutral.map((item, i) => (
+                <section key={i} className="rounded-2xl border border-[#F0997B]/40 bg-white/60 p-5">
+                  <p className="font-serif text-sm text-[#712B13]">{item.summary}</p>
+                  <p className="mt-1 text-sm leading-relaxed text-[#4A1B0C]/90">{item.detail}</p>
+                </section>
+              ))}
+
+              {/* ── 잠금 티저 ── */}
+              <div className="rounded-2xl border border-[#F5C4B3] bg-[#FAECE7] p-5">
+                {["갈등 포인트 심층 분석", "연애 타이밍", "속궁합"].map((label) => (
+                  <div key={label} className="flex items-center gap-2 py-1.5 text-sm text-[#993C1D]">
+                    <span aria-hidden>🔒</span>{label}
+                    <span className="ml-1 h-2 flex-1 rounded bg-[#F5C4B3]" />
+                  </div>
+                ))}
+                <button className="mt-3 w-full rounded-xl bg-[#D85A30] py-2.5 text-sm text-[#FAECE7] transition hover:bg-[#993C1D]">
                   {nameB}님이 태어난 시간을 입력하면 해금
                 </button>
               </div>
 
-              <details className="mt-4 rounded-xl border border-[#F0997B]/40 bg-white/50 p-4 text-sm text-[#712B13]">
-                <summary className="cursor-pointer font-serif">점수 근거 보기</summary>
-                <ul className="mt-2 flex flex-col gap-1.5">
-                  {g.breakdown.map((item, i) => (
-                    <li key={i}>
-                      <span className={item.delta >= 0 ? "text-[#3B6D11]" : "text-[#A32D2D]"}>
-                        [{item.delta >= 0 ? "+" : ""}{item.delta}]
-                      </span>{" "}
-                      {item.detail}
-                    </li>
-                  ))}
-                </ul>
-              </details>
-
               <button
                 onClick={() => setResult(null)}
-                className="mt-4 w-full rounded-xl border border-[#D85A30]/50 py-2.5 text-sm text-[#993C1D] transition hover:bg-[#FAECE7]"
+                className="w-full rounded-xl border border-[#D85A30]/50 py-2.5 text-sm text-[#993C1D] transition hover:bg-[#FAECE7]"
               >
                 다시 보기
               </button>
+
+              <p className="text-center text-xs text-[#993C1D]/50">
+                재미로 보는 궁합이에요 · 중요한 결정은 두 분의 마음으로
+              </p>
             </div>
           );
         })()}
