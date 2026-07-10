@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import {
   getSaju, getGunghap, canUnlockDeepReport, getDeepReport,
   type GunghapResult, type SajuChart,
@@ -72,18 +72,6 @@ function compute(me: PersonForm, you: PersonForm): ResultState {
   const sajuA = parsePerson(me);
   const sajuB = parsePerson(you);
   return { g: getGunghap(sajuA, sajuB, { a: nameA, b: nameB }), sajuA, sajuB, nameA, nameB };
-}
-
-/** 상대가 자기 시간만 입력하면 되도록 초대 링크 생성 (역할을 뒤집어 인코딩) */
-function buildInviteUrl(me: PersonForm, you: PersonForm): string {
-  const params = new URLSearchParams({
-    mn: you.name || "그 사람",
-    md: you.date,
-    on: me.name || "나",
-    od: me.date,
-  });
-  if (me.time !== "unknown") params.set("oh", me.time);
-  return `${window.location.origin}${window.location.pathname}?${params.toString()}`;
 }
 
 // ─────────── 텍스트 렌더러 ───────────
@@ -160,29 +148,16 @@ function PersonFields({
   );
 }
 
-/** 잠금 화면: 내 시간이 없으면 그 자리에서 바로 입력 + 재계산, 상대 시간이 없으면 초대 링크 생성 */
+/** 잠금 화면: 내 시간이 없으면 그 자리에서 바로 입력 + 재계산, 상대 시간이 없으면 폼으로 돌아가 다시 입력 */
 function UnlockPanel({
-  missingMine, me, you, onFixMyTime, nameB,
+  missingMine, onFixMyTime, onBackToForm, nameB,
 }: {
   missingMine: boolean;
-  me: PersonForm;
-  you: PersonForm;
   onFixMyTime: (hour: string) => void;
+  onBackToForm: () => void;
   nameB: string;
 }) {
   const [hourPick, setHourPick] = useState("");
-  const [copied, setCopied] = useState(false);
-
-  const copyInvite = async () => {
-    const url = buildInviteUrl(me, you);
-    try {
-      await navigator.clipboard.writeText(url);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2500);
-    } catch {
-      window.prompt("아래 링크를 복사해서 보내주세요", url);
-    }
-  };
 
   return (
     <div className="rounded-2xl border border-[#F5C4B3] bg-[#FAECE7] p-5">
@@ -218,15 +193,15 @@ function UnlockPanel({
         </div>
       ) : (
         <div className="mt-3 flex flex-col gap-2">
+          <p className="text-sm text-[#712B13]">
+            {nameB}님한테 태어난 시간을 물어본 다음, 폼으로 돌아가 입력하면 열려요
+          </p>
           <button
-            onClick={copyInvite}
+            onClick={onBackToForm}
             className="w-full rounded-xl bg-[#D85A30] py-2.5 text-sm text-[#FAECE7] transition hover:bg-[#993C1D]"
           >
-            {copied ? "링크가 복사됐어요! 카톡으로 보내보세요" : `${nameB}님에게 보낼 링크 만들기`}
+            다시 입력하러 가기
           </button>
-          <p className="text-center text-xs text-[#993C1D]/60">
-            {nameB}님이 링크를 열어 자기 시간만 넣으면 바로 심층 리포트가 열려요
-          </p>
         </div>
       )}
     </div>
@@ -238,25 +213,6 @@ export default function Home() {
   const [you, setYou] = useState<PersonForm>(EMPTY_PERSON);
   const [result, setResult] = useState<ResultState | null>(null);
   const [error, setError] = useState("");
-  const [fromInvite, setFromInvite] = useState(false);
-
-  // 초대 링크로 들어온 경우 쿼리 파라미터로 두 사람 정보 프리필
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const md = params.get("md");
-    const od = params.get("od");
-    if (!md || !od) return;
-
-    setMe({ name: params.get("mn") || "", date: md, time: "unknown" });
-    setYou({
-      name: params.get("on") || "",
-      date: od,
-      time: params.get("oh") || "unknown",
-    });
-    setFromInvite(true);
-    // 주소창을 깨끗하게 정리 (정보가 URL에 계속 남아있지 않도록)
-    window.history.replaceState({}, "", window.location.pathname);
-  }, []);
 
   const submit = () => {
     setError("");
@@ -290,11 +246,6 @@ export default function Home() {
 
         {!result && (
           <div className="mt-8 flex flex-col gap-5">
-            {fromInvite && (
-              <p className="rounded-xl bg-[#F5C4B3]/50 px-4 py-2 text-center text-sm text-[#712B13]">
-                {you.name}님이 궁합을 확인했어요. 태어난 시간만 넣으면 심층 리포트가 열려요!
-              </p>
-            )}
             <PersonFields title="나" value={me} onChange={setMe} timeRequired />
             <PersonFields title="그 사람" value={you} onChange={setYou} />
             {error && <p className="text-center text-sm text-[#A32D2D]">{error}</p>}
@@ -435,10 +386,9 @@ export default function Home() {
                 return (
                   <UnlockPanel
                     missingMine={sajuA.hour === null}
-                    me={me}
-                    you={you}
                     nameB={nameB}
                     onFixMyTime={fixMyTime}
+                    onBackToForm={() => setResult(null)}
                   />
                 );
               })()}
