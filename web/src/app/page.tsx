@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   getSaju, getGunghap, canUnlockDeepReport, getDeepReport,
   type GunghapResult, type SajuChart,
@@ -52,12 +52,38 @@ interface PersonForm {
   time: string;   // 'unknown' | '0'..'23'
 }
 
+const EMPTY_PERSON: PersonForm = { name: "", date: "", time: "unknown" };
+
 function parsePerson(p: PersonForm): SajuChart {
   const [y, m, d] = p.date.split("-").map(Number);
   return getSaju({
     year: y, month: m, day: d,
     ...(p.time !== "unknown" ? { hour: Number(p.time) } : {}),
   });
+}
+
+interface ResultState {
+  g: GunghapResult; sajuA: SajuChart; sajuB: SajuChart; nameA: string; nameB: string;
+}
+
+function compute(me: PersonForm, you: PersonForm): ResultState {
+  const nameA = me.name.trim() || "나";
+  const nameB = you.name.trim() || "그 사람";
+  const sajuA = parsePerson(me);
+  const sajuB = parsePerson(you);
+  return { g: getGunghap(sajuA, sajuB, { a: nameA, b: nameB }), sajuA, sajuB, nameA, nameB };
+}
+
+/** 상대가 자기 시간만 입력하면 되도록 초대 링크 생성 (역할을 뒤집어 인코딩) */
+function buildInviteUrl(me: PersonForm, you: PersonForm): string {
+  const params = new URLSearchParams({
+    mn: you.name || "그 사람",
+    md: you.date,
+    on: me.name || "나",
+    od: me.date,
+  });
+  if (me.time !== "unknown") params.set("oh", me.time);
+  return `${window.location.origin}${window.location.pathname}?${params.toString()}`;
 }
 
 // ─────────── 텍스트 렌더러 ───────────
@@ -134,28 +160,121 @@ function PersonFields({
   );
 }
 
+/** 잠금 화면: 내 시간이 없으면 그 자리에서 바로 입력 + 재계산, 상대 시간이 없으면 초대 링크 생성 */
+function UnlockPanel({
+  missingMine, me, you, onFixMyTime, nameB,
+}: {
+  missingMine: boolean;
+  me: PersonForm;
+  you: PersonForm;
+  onFixMyTime: (hour: string) => void;
+  nameB: string;
+}) {
+  const [hourPick, setHourPick] = useState("");
+  const [copied, setCopied] = useState(false);
+
+  const copyInvite = async () => {
+    const url = buildInviteUrl(me, you);
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2500);
+    } catch {
+      window.prompt("아래 링크를 복사해서 보내주세요", url);
+    }
+  };
+
+  return (
+    <div className="rounded-2xl border border-[#F5C4B3] bg-[#FAECE7] p-5">
+      {["갈등 포인트 심층 분석", "연애 타이밍", "속마음 궁합"].map((label) => (
+        <div key={label} className="flex items-center gap-2 py-1.5 text-sm text-[#993C1D]">
+          <span aria-hidden>🔒</span>{label}
+          <span className="ml-1 h-2 flex-1 rounded bg-[#F5C4B3]" />
+        </div>
+      ))}
+
+      {missingMine ? (
+        <div className="mt-3 flex flex-col gap-2">
+          <p className="text-sm text-[#712B13]">내가 태어난 시간을 입력하면 바로 열려요</p>
+          <div className="flex gap-2">
+            <select
+              value={hourPick}
+              onChange={(e) => setHourPick(e.target.value)}
+              className="flex-1 rounded-lg border border-[#F0997B]/50 bg-white px-3 py-2 text-sm text-[#4A1B0C] focus:outline-none focus:ring-2 focus:ring-[#D85A30]/40"
+            >
+              <option value="">태어난 시간 선택</option>
+              {HOURS.map((h) => (
+                <option key={h} value={h}>{h}시 ~ {h}시 59분</option>
+              ))}
+            </select>
+            <button
+              onClick={() => hourPick !== "" && onFixMyTime(hourPick)}
+              disabled={hourPick === ""}
+              className="rounded-lg bg-[#D85A30] px-4 text-sm text-[#FAECE7] transition hover:bg-[#993C1D] disabled:opacity-40"
+            >
+              적용
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div className="mt-3 flex flex-col gap-2">
+          <button
+            onClick={copyInvite}
+            className="w-full rounded-xl bg-[#D85A30] py-2.5 text-sm text-[#FAECE7] transition hover:bg-[#993C1D]"
+          >
+            {copied ? "링크가 복사됐어요! 카톡으로 보내보세요" : `${nameB}님에게 보낼 링크 만들기`}
+          </button>
+          <p className="text-center text-xs text-[#993C1D]/60">
+            {nameB}님이 링크를 열어 자기 시간만 넣으면 바로 심층 리포트가 열려요
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function Home() {
-  const [me, setMe] = useState<PersonForm>({ name: "", date: "", time: "unknown" });
-  const [you, setYou] = useState<PersonForm>({ name: "", date: "", time: "unknown" });
-  const [result, setResult] = useState<{
-    g: GunghapResult; sajuA: SajuChart; sajuB: SajuChart; nameA: string; nameB: string;
-  } | null>(null);
+  const [me, setMe] = useState<PersonForm>(EMPTY_PERSON);
+  const [you, setYou] = useState<PersonForm>(EMPTY_PERSON);
+  const [result, setResult] = useState<ResultState | null>(null);
   const [error, setError] = useState("");
+  const [fromInvite, setFromInvite] = useState(false);
+
+  // 초대 링크로 들어온 경우 쿼리 파라미터로 두 사람 정보 프리필
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const md = params.get("md");
+    const od = params.get("od");
+    if (!md || !od) return;
+
+    setMe({ name: params.get("mn") || "", date: md, time: "unknown" });
+    setYou({
+      name: params.get("on") || "",
+      date: od,
+      time: params.get("oh") || "unknown",
+    });
+    setFromInvite(true);
+    // 주소창을 깨끗하게 정리 (정보가 URL에 계속 남아있지 않도록)
+    window.history.replaceState({}, "", window.location.pathname);
+  }, []);
 
   const submit = () => {
     setError("");
     if (!me.date || !you.date) { setError("생년월일을 입력해주세요"); return; }
     try {
-      const nameA = me.name.trim() || "나";
-      const nameB = you.name.trim() || "그 사람";
-      const sajuA = parsePerson(me);
-      const sajuB = parsePerson(you);
-      setResult({
-        g: getGunghap(sajuA, sajuB, { a: nameA, b: nameB }),
-        sajuA, sajuB, nameA, nameB,
-      });
+      setResult(compute(me, you));
     } catch (e) {
       setError(e instanceof Error ? e.message : "계산 중 문제가 생겼어요");
+    }
+  };
+
+  const fixMyTime = (hour: string) => {
+    const updatedMe = { ...me, time: hour };
+    setMe(updatedMe);
+    try {
+      setResult(compute(updatedMe, you));
+    } catch {
+      // 무시: 기존 결과 유지
     }
   };
 
@@ -171,6 +290,11 @@ export default function Home() {
 
         {!result && (
           <div className="mt-8 flex flex-col gap-5">
+            {fromInvite && (
+              <p className="rounded-xl bg-[#F5C4B3]/50 px-4 py-2 text-center text-sm text-[#712B13]">
+                {you.name}님이 궁합을 확인했어요. 태어난 시간만 넣으면 심층 리포트가 열려요!
+              </p>
+            )}
             <PersonFields title="나" value={me} onChange={setMe} timeRequired />
             <PersonFields title="그 사람" value={you} onChange={setYou} />
             {error && <p className="text-center text-sm text-[#A32D2D]">{error}</p>}
@@ -281,7 +405,7 @@ export default function Home() {
                 </section>
               ))}
 
-              {/* ── 심층 리포트: 해금 or 잠금 티저 ── */}
+              {/* ── 심층 리포트: 해금 or 잠금 패널 ── */}
               {(() => {
                 const unlocked = canUnlockDeepReport(sajuA, sajuB);
                 if (unlocked) {
@@ -308,22 +432,14 @@ export default function Home() {
                     </>
                   );
                 }
-                const missingMine = sajuA.hour === null;
-                const cta = missingMine
-                  ? "태어난 시간을 입력하면 심층 리포트가 열려요"
-                  : `${nameB}님이 태어난 시간을 입력하면 해금`;
                 return (
-                  <div className="rounded-2xl border border-[#F5C4B3] bg-[#FAECE7] p-5">
-                    {["갈등 포인트 심층 분석", "연애 타이밍", "속마음 궁합"].map((label) => (
-                      <div key={label} className="flex items-center gap-2 py-1.5 text-sm text-[#993C1D]">
-                        <span aria-hidden>🔒</span>{label}
-                        <span className="ml-1 h-2 flex-1 rounded bg-[#F5C4B3]" />
-                      </div>
-                    ))}
-                    <button className="mt-3 w-full rounded-xl bg-[#D85A30] py-2.5 text-sm text-[#FAECE7] transition hover:bg-[#993C1D]">
-                      {cta}
-                    </button>
-                  </div>
+                  <UnlockPanel
+                    missingMine={sajuA.hour === null}
+                    me={me}
+                    you={you}
+                    nameB={nameB}
+                    onFixMyTime={fixMyTime}
+                  />
                 );
               })()}
 
