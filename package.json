@@ -1,1 +1,11 @@
-﻿{"name":"hap","version":"0.1.0","private":true,"type":"module","scripts":{"dev":"pnpm --filter web dev","build":"pnpm --filter web build"}}
+﻿{
+  "name": "hap",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@11.10.0",
+  "scripts": {
+    "dev": "pnpm --filter web dev",
+    "build": "pnpm --filter web build"
+  }
+}

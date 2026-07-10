@@ -11,7 +11,7 @@ const myeongjo = Nanum_Myeongjo({
 
 export const metadata: Metadata = {
   title: "합 — 우리 사주 궁합",
-  description: "생년월일만으로 보는 사주 궁합. 우리, 합이 맞을까?",
+  description: "생년월일만으로 보는 사주 궁합. 너랑 나, 합이 맞을까?",
 };
 
 export default function RootLayout({
