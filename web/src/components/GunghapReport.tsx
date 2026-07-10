@@ -1,6 +1,7 @@
 import { getSaju, canUnlockDeepReport, getDeepReport } from "@hap/core";
 import { Rich, TimingParagraph } from "@/components/RichText";
 import { UnlockPanel } from "@/components/UnlockPanel";
+import { WaitlistForm } from "@/components/WaitlistForm";
 import { makeHeadline, tagToLabel, type ResultState } from "@/lib/gunghap-ui";
 
 export function GunghapReport({
@@ -139,6 +140,8 @@ export function GunghapReport({
           onBackToForm={onBackToForm}
         />
       )}
+
+      <WaitlistForm nameA={nameA} nameB={nameB} />
 
       <button
         onClick={onBackToForm}
